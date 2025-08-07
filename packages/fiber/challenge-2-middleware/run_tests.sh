@@ -38,36 +38,45 @@ if [ -f "go.mod" ]; then
     cp "go.mod" "$TEMP_DIR/"
 fi
 
-# Copy go.sum if it exists
-if [ -f "go.sum" ]; then
-    cp "go.sum" "$TEMP_DIR/"
+# Rename solution.go to solution-template.go for the test
+mv "$TEMP_DIR/solution.go" "$TEMP_DIR/solution-template.go"
+
+echo "Running tests for user '$USERNAME'..."
+
+# Navigate to the temporary directory
+pushd "$TEMP_DIR" > /dev/null
+
+# If go.mod exists, use it; otherwise initialize a new module
+if [ -f "go.mod" ]; then
+    echo "Using existing go.mod file"
+    # Update module name to avoid conflicts (macOS compatible)
+    sed -i '' 's/^module .*/module challenge/' go.mod
+    # Download dependencies
+    go mod tidy || {
+        echo "Failed to download dependencies."
+        popd > /dev/null
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+else
+    # Initialize a new Go module in the temporary directory
+    go mod init "challenge" || {
+        echo "Failed to initialize Go module."
+        popd > /dev/null
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
 fi
-
-# Change to the temporary directory
-cd "$TEMP_DIR" || exit 1
-
-# Rename the solution file to match the expected name
-mv "solution.go" "solution-template.go"
-
-echo "Running tests for $USERNAME's solution..."
 
 # Run the tests
 go test -v
 
-# Capture the exit code
-EXIT_CODE=$?
+TEST_EXIT_CODE=$?
 
 # Return to the original directory
-cd - > /dev/null
+popd > /dev/null
 
 # Clean up the temporary directory
 rm -rf "$TEMP_DIR"
 
-# Check if tests passed
-if [ $EXIT_CODE -eq 0 ]; then
-    echo "✅ All tests passed! Great job, $USERNAME!"
-    echo "Your solution is ready for submission."
-else
-    echo "❌ Some tests failed. Please review your implementation and try again."
-    exit 1
-fi
+exit $TEST_EXIT_CODE

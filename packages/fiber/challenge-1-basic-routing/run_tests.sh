@@ -1,84 +1,82 @@
 #!/bin/bash
 
-# Fiber Challenge 1: Basic Routing - Test Runner
-set -e
+# Script to run tests for a participant's submission
 
-echo "🚀 Fiber Challenge 1: Basic Routing Test Runner"
-echo "================================================"
+# Function to display usage
+usage() {
+    echo "Usage: $0"
+    exit 1
+}
 
-# Check if Go is installed
-if ! command -v go &> /dev/null; then
-    echo "❌ Go is not installed. Please install Go first."
+# Verify that we are in a challenge directory
+if [ ! -f "solution-template_test.go" ]; then
+    echo "Error: solution-template_test.go not found. Please run this script from a challenge directory."
     exit 1
 fi
 
-# Check if solution file exists
-if [ ! -f "solution-template.go" ]; then
-    echo "❌ solution-template.go not found!"
-    echo "Please make sure you're in the challenge directory."
+# Prompt for GitHub username
+read -p "Enter your GitHub username: " USERNAME
+
+SUBMISSION_DIR="submissions/$USERNAME"
+SUBMISSION_FILE="$SUBMISSION_DIR/solution.go"
+
+# Check if the submission file exists
+if [ ! -f "$SUBMISSION_FILE" ]; then
+    echo "Error: Solution file '$SUBMISSION_FILE' not found."
+    echo "Note: Package challenges use 'solution.go' instead of 'solution-template.go'"
     exit 1
 fi
 
-# Get username for submission
-read -p "Enter your GitHub username (for submission tracking): " username
+# Create a temporary directory to avoid modifying the original files
+TEMP_DIR=$(mktemp -d)
 
-if [ -z "$username" ]; then
-    echo "❌ Username is required for submission tracking."
-    exit 1
+# Copy the participant's solution, test file, and go.mod to the temporary directory
+cp "$SUBMISSION_FILE" "solution-template_test.go" "$TEMP_DIR/"
+
+# Copy go.mod if it exists
+if [ -f "go.mod" ]; then
+    cp "go.mod" "$TEMP_DIR/"
 fi
 
-echo "👤 Testing solution for: $username"
-echo ""
+# Rename solution.go to solution-template.go for the test
+mv "$TEMP_DIR/solution.go" "$TEMP_DIR/solution-template.go"
 
-# Create temporary directory for testing
-temp_dir=$(mktemp -d)
-echo "📁 Created temporary test environment: $temp_dir"
+echo "Running tests for user '$USERNAME'..."
 
-# Copy files to temp directory
-cp -r . "$temp_dir/"
-cd "$temp_dir"
+# Navigate to the temporary directory
+pushd "$TEMP_DIR" > /dev/null
 
-# Initialize go mod if needed
-if [ ! -f "go.sum" ]; then
-    echo "📦 Installing dependencies..."
-    go mod tidy
+# If go.mod exists, use it; otherwise initialize a new module
+if [ -f "go.mod" ]; then
+    echo "Using existing go.mod file"
+    # Update module name to avoid conflicts (macOS compatible)
+    sed -i '' 's/^module .*/module challenge/' go.mod
+    # Download dependencies
+    go mod tidy || {
+        echo "Failed to download dependencies."
+        popd > /dev/null
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+else
+    # Initialize a new Go module in the temporary directory
+    go mod init "challenge" || {
+        echo "Failed to initialize Go module."
+        popd > /dev/null
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
 fi
 
 # Run the tests
-echo "🧪 Running tests..."
-echo ""
+go test -v
 
-if go test -v; then
-    echo ""
-    echo "✅ All tests passed! Great job!"
-    echo ""
-    
-    # Create submission directory if it doesn't exist
-    submission_dir="../submissions/$username"
-    mkdir -p "$submission_dir"
-    
-    # Copy solution to submissions
-    cp solution-template.go "$submission_dir/solution.go"
-    
-    echo "💾 Solution saved to submissions/$username/solution.go"
-    echo ""
-    echo "🎉 Challenge completed successfully!"
-    echo "Ready to move on to Challenge 2: Middleware"
-    
-else
-    echo ""
-    echo "❌ Some tests failed. Please review your implementation and try again."
-    echo ""
-    echo "💡 Hints:"
-    echo "  - Check hints.md for implementation guidance"
-    echo "  - Ensure all TODO sections are implemented"
-    echo "  - Verify HTTP status codes and JSON responses"
-    echo "  - Make sure routes are defined correctly"
-    echo ""
-fi
+TEST_EXIT_CODE=$?
 
-# Cleanup
-cd - > /dev/null
-rm -rf "$temp_dir"
+# Return to the original directory
+popd > /dev/null
 
-echo "🧹 Cleaned up temporary files"
+# Clean up the temporary directory
+rm -rf "$TEMP_DIR"
+
+exit $TEST_EXIT_CODE

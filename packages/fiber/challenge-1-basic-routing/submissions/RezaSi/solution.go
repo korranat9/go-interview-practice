@@ -41,6 +41,14 @@ func NewTaskStore() *TaskStore {
 var taskStore = NewTaskStore()
 
 func main() {
+	app := setupApp()
+
+	// Start the server on port 3000
+	app.Listen(":3000")
+}
+
+// setupApp creates and configures the Fiber app with all routes
+func setupApp() *fiber.App {
 	// Create a new Fiber app instance
 	app := fiber.New()
 
@@ -124,8 +132,7 @@ func main() {
 		return c.SendStatus(204)
 	})
 
-	// Start the server on port 3000
-	app.Listen(":3000")
+	return app
 }
 
 // Helper methods for TaskStore

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,78 +15,8 @@ func setupTestApp() *fiber.App {
 	// Reset task store for each test
 	taskStore = NewTaskStore()
 
-	app := fiber.New()
-
-	// Setup routes (copy from main function implementation)
-	app.Get("/ping", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "pong"})
-	})
-
-	app.Get("/tasks", func(c *fiber.Ctx) error {
-		tasks := taskStore.GetAll()
-		return c.JSON(tasks)
-	})
-
-	app.Get("/tasks/:id", func(c *fiber.Ctx) error {
-		idStr := c.Params("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid task ID"})
-		}
-
-		task, exists := taskStore.GetByID(id)
-		if !exists {
-			return c.Status(404).JSON(fiber.Map{"error": "Task not found"})
-		}
-
-		return c.JSON(task)
-	})
-
-	app.Post("/tasks", func(c *fiber.Ctx) error {
-		var newTask Task
-		if err := c.BodyParser(&newTask); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
-		}
-
-		task := taskStore.Create(newTask.Title, newTask.Description, newTask.Completed)
-		return c.Status(201).JSON(task)
-	})
-
-	app.Put("/tasks/:id", func(c *fiber.Ctx) error {
-		idStr := c.Params("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid task ID"})
-		}
-
-		var updateTask Task
-		if err := c.BodyParser(&updateTask); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
-		}
-
-		task, exists := taskStore.Update(id, updateTask.Title, updateTask.Description, updateTask.Completed)
-		if !exists {
-			return c.Status(404).JSON(fiber.Map{"error": "Task not found"})
-		}
-
-		return c.JSON(task)
-	})
-
-	app.Delete("/tasks/:id", func(c *fiber.Ctx) error {
-		idStr := c.Params("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "Invalid task ID"})
-		}
-
-		if !taskStore.Delete(id) {
-			return c.Status(404).JSON(fiber.Map{"error": "Task not found"})
-		}
-
-		return c.SendStatus(204)
-	})
-
-	return app
+	// Call the setupApp function from the user's solution
+	return setupApp()
 }
 
 func TestPingEndpoint(t *testing.T) {
