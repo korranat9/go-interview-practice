@@ -83,6 +83,7 @@ func (s *Server) SetupRoutes() *http.ServeMux {
 	// Web routes
 	mux.HandleFunc("/", webHandler.HomePage)
 	mux.HandleFunc("/challenge/", webHandler.ChallengePage)
+	mux.HandleFunc("/interview", webHandler.InterviewPage)
 	mux.HandleFunc("/scoreboard", webHandler.ScoreboardPage)
 	mux.HandleFunc("/scoreboard/", webHandler.ScoreChallengeHandler)
 	mux.HandleFunc("/packages/", func(w http.ResponseWriter, r *http.Request) {
